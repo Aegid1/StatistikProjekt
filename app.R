@@ -146,14 +146,44 @@ ui <- navbarPage(
                dataTableOutput("dataTable")
              )
              
-    )
+    ),
+  
+  tabPanel(title = "Quellen",
+           
+        p("https://stackoverflow.com/questions/74043151/geom-text-in-ggplot-gem-bar-geom-text-requires-the-following-missing-aesthet"),
+        
+        p("https://r-graph-gallery.com/48-grouped-barplot-with-ggplot2"),
+        
+        p("https://ggplot2.tidyverse.org/reference/geom_text.html"),
+        
+        
+        h3("ChatGPT Prompts:"),
+        
+        p("was macht die nrow() funktion?"),
+        
+        p("wie würde ich die relativen Häufigkeiten in einer Zeile berechnen, 
+          wenn ich mehrere Merkmale hätte wie hier: 
+          ggplot(df, aes(x = paste(first_feature, second_feature, third_feature), fill = factor(titanic_data$Survived)))"),
+        
+        p("was macht die interaction() methode?"),
+        
+        p("wie kann ich auf 2 nachkommastellen runden"),
+        
+        p("was muss ich im UI part der shiny app statt sidebarPanel angeben, dass der Inhalt des ursprünglichen sidebarPanels unter dem MainPanel ist?"),
+        
+        p("alle Dezimalwerte einer spalte auf nächste tiefere ganze zahl in R runterrunden"),
+        
+        
+  ),
   
   
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-  
+ 
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------- 
     output$barplot <- renderPlot({
       
         if(input$x1 == "classes"){
@@ -268,12 +298,14 @@ server <- function(input, output, session) {
       upperBound <- input$werteRangeSlider[2] / 100
       lowerBound <- input$werteRangeSlider[1] / 100
       filtered_data <- df_relative[as.integer((nrow(df_relative) * lowerBound)):as.integer((nrow(df_relative) * upperBound)), ]
-      
+      names(filtered_data)[names(filtered_data)== "`round(Freq/sum(Freq), digits = 2)`"] <- "relative frequencies"
+      names(filtered_data)[names(filtered_data)== "Var1"] <- "Survived"
+
       #für fill muss Var2 anscheinend ein faktor sein
-      plot_bar <- ggplot(data = filtered_data, aes(x = (grouped_data) , y = Freq, fill = factor(Var1))) +
+      plot_bar <- ggplot(data = filtered_data, aes(x = (grouped_data) , y = Freq, fill = factor(Survived))) +
         geom_bar(stat = "identity") + 
-        geom_text(aes(label = filtered_data$`round(Freq/sum(Freq), digits = 2)`), position = position_stack(vjust = 0.5), size = 3) 
-      
+        geom_text(aes(label = filtered_data$`round(Freq/sum(Freq), digits = 2)`), position = position_stack(vjust = 0.5), size = 3) +
+        labs(x = "Merkmale", y = "absolute frequencies")
       plot_bar
       
       
@@ -281,46 +313,67 @@ server <- function(input, output, session) {
     
     
 #---------------------------------------------------------------------------------------------------------------------------------------------#    
+    passenger_survived <- assocstats(table(titanic_data$PassengerId, titanic_data$Survived))
+    passenger_survived$cramer
+    
     pclass_survived <- assocstats(table(titanic_data$Pclass, titanic_data$Survived))
     pclass_survived$cramer
+    
+    cabin_survived <- assocstats(table(titanic_data$Cabin, titanic_data$Survived))
+    cabin_survived$cramer
+    
+    name_survived <- assocstats(table(titanic_data$Name, titanic_data$Survived))
+    name_survived$cramer
     
     gender_survived <- assocstats(table(titanic_data$Sex, titanic_data$Survived))
     gender_survived$cramer
     
-    embarked_survived <- assocstats(table(titanic_data$Embarked, titanic_data$Survived))
-    embarked_survived$cramer
-    
     age_survived <- assocstats(table(titanic_data$Age, titanic_data$Survived))
     age_survived$cramer
-    
-    fare_survived <- assocstats(table(titanic_data$Fare, titanic_data$Survived))
-    fare_survived$cramer
     
     sbsp_survived <- assocstats(table(titanic_data$SibSp, titanic_data$Survived))
     sbsp_survived$cramer
     
     pach_survived <- assocstats(table(titanic_data$SibSp, titanic_data$Survived))
     pach_survived$cramer
+
+    ticket_survived <- assocstats(table(titanic_data$Ticket, titanic_data$Survived))
+    ticket_survived$cramer
     
-#---------------------------------------------------------------------------------------------------------------------------------------------#    
+    fare_survived <- assocstats(table(titanic_data$Fare, titanic_data$Survived))
+    fare_survived$cramer
+    
+    embarked_survived <- assocstats(table(titanic_data$Embarked, titanic_data$Survived))
+    embarked_survived$cramer
     
     output$dependencies <- renderTable({
       
-      data <- data.frame(Kombinationen = c("Pclass | Survived:", 
-                                     "Gender | Survived", 
-                                     "Embarked | Survived",
-                                     "Age | Survived",
-                                     "Fare_Prices | Survived",
-                                     "Sibling_Spouses | Survived", 
-                                     "Parents_Children | Survived"),
+      data <- data.frame(Kombinationen = c("Passenger | Survived:",
+                                     "Pclass | Survived:", 
+                                     "Cabin | Survived:",
+                                     "Name | Survived:",
+                                     "Gender | Survived:", 
+                                     "Age | Survived:",
+                                     "Sibling_Spouses | Survived:", 
+                                     "Parents_Children | Survived:",
+                                     "Ticket | Survived:",
+                                     "Fare_Prices | Survived:",
+                                     "Embarked | Survived:"
+                                     
+      ),
                           
-                           Abhängigkeit = c(pclass_survived$cramer,
+                           Abhängigkeit = c(passenger_survived$cramer,
+                                    pclass_survived$cramer,
+                                    cabin_survived$cramer,
+                                    name_survived$cramer,
                                     gender_survived$cramer,
-                                      embarked_survived$cramer,
-                                      age_survived$cramer,
-                                      fare_survived$cramer,
-                                      sbsp_survived$cramer,
-                                      pach_survived$cramer)
+                                    age_survived$cramer,
+                                    sbsp_survived$cramer,
+                                    pach_survived$cramer,
+                                    ticket_survived$cramer,
+                                    fare_survived$cramer,
+                                    embarked_survived$cramer
+                           )
       )
       data
       
@@ -331,6 +384,9 @@ server <- function(input, output, session) {
     output$dataTable <- renderDataTable({
       titanic_data  # Dein gesamter Datensatz
     })
+
+    
+#-------------------------------------------------------------------------------------------------------------------------------------------------    
     
 }
 
