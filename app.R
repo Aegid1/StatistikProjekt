@@ -11,13 +11,11 @@ ui <- navbarPage(
   
   titlePanel(h1("My title")),
   
-  #hier brauch ich noch die häufigkeiten
-  tabPanel(title = "Barplots",
+  tabPanel(title = "only 2 features",
            sidebarLayout(position = "right",
                          
                          sidebarPanel(
                            
-                           #fare_prices Verteilung genauer untersuchen
                            selectInput(
                              inputId = "x1",
                              label = "X-axis:",
@@ -120,20 +118,7 @@ ui <- navbarPage(
            )
   ),
   
-  
-  
-  tabPanel(title = "Abhängigkeiten der Merkmale",
-           
-           mainPanel(
-             
-             tableOutput("dependencies")
-             
-           )
-           
-  ),
-  
-  
-  tabPanel(title = "Datensatz",
+  tabPanel(title = "Dataset",
            
            
            mainPanel(
@@ -143,7 +128,7 @@ ui <- navbarPage(
            
   ),
   
-  tabPanel(title = "Quellen",
+  tabPanel(title = "Sources",
            
            p("https://stackoverflow.com/questions/74043151/geom-text-in-ggplot-gem-bar-geom-text-requires-the-following-missing-aesthet"),
            
@@ -182,7 +167,6 @@ server <- function(input, output) {
   output$barplot <- renderPlot({
     
     if(input$x1 == "classes"){
-      # factor wird hier gefordert
       titanic_data$Survived <- factor(titanic_data$Survived)
       classes <- ggplot(data = titanic_data, aes(x= Pclass, fill = Survived, label = "classes"))
       classes <- classes + geom_bar(stat = "count")
@@ -219,7 +203,7 @@ server <- function(input, output) {
     }
     
     else if(input$x1 == "fare_prices"){
-      #hier wurden die fare_prices runtergerundet auf die tiefere ganze zahl
+      #fare_prices are rounded down in this section -> easier analysis
       fare_breaks <- c(seq(0, 512, (512/as.numeric(input$fare_slider))))
       fare_labels <- paste(fare_breaks[-length(fare_breaks)], fare_breaks[-1], sep = "-")
       fare_class <- cut(floor(titanic_data$Fare), breaks = fare_breaks, labels = fare_labels, include.lowest = TRUE)
@@ -255,7 +239,7 @@ server <- function(input, output) {
   
   output$multipleStackedBarChart <- renderPlot({
     
-    #interaction() macht kombinationen aus den merkmalen, also Kreuzprodukt
+    #interaction() is necessary for the combination
     grouped_data <- interaction(titanic_data$Sex)
     
     if(input$Pclass == TRUE) { grouped_data <- paste(grouped_data, titanic_data$Pclass, sep = ".") }
@@ -285,7 +269,7 @@ server <- function(input, output) {
     grouped_table <- table(titanic_data$Survived, grouped_data)
     grouped_df <- data.frame(grouped_table)
     
-    #mutate fügt neue Spalte hinzu
+    #mutate adds a new column
     df_relative <- grouped_df
     df_relative <- group_by(df_relative, grouped_data)
     df_relative <- mutate(df_relative, round(Freq / sum(Freq), digits = 2))
@@ -296,10 +280,10 @@ server <- function(input, output) {
     upperBoundDomain <- input$domainRangeSlider[2] / 100
     lowerBoundDomain <- input$domainRangeSlider[1] / 100
     
-    #dadurch wird der Definitionsbereich/domain ausgewählt
+    #domain gets selected
     filtered_data <- df_relative[as.integer((nrow(df_relative) * lowerBoundDomain)):as.integer((nrow(df_relative) * upperBoundDomain)), ]
     print(filtered_data)
-    #dadurch wird der Wertebreich/value range ausgewählt
+    #value range gets selected
     filtered_data <- df_relative %>%
       filter((Var1 == 1 & `round(Freq/sum(Freq), digits = 2)` >= lowerBoundValueRange & `round(Freq/sum(Freq), digits = 2)` <= upperBoundValueRange) 
              | (Var1 == 0 & `round(Freq/sum(Freq), digits = 2)` <= (1- lowerBoundValueRange) & `round(Freq/sum(Freq), digits = 2)` >= (1 - upperBoundValueRange)))
@@ -310,81 +294,13 @@ server <- function(input, output) {
     names(filtered_data)[names(filtered_data)== "Var1"] <- "Survived"
 
     
-    #für fill muss Var2 anscheinend ein faktor sein
+    #fill needs a factor as a value therefore -> factor()
     plot_bar <- ggplot(data = filtered_data, aes(x = (grouped_data) , y = Freq, fill = factor(Survived))) +
       geom_bar(stat = "identity") + 
       geom_text(aes(label = filtered_data$`round(Freq/sum(Freq), digits = 2)`), position = position_stack(vjust = 0.5), size = 3) +
       labs(x = "Merkmale", y = "absolute frequencies")
     plot_bar
     
-    
-  })
-  
-  
-  #---------------------------------------------------------------------------------------------------------------------------------------------#    
-  passenger_survived <- assocstats(table(titanic_data$PassengerId, titanic_data$Survived))
-  passenger_survived$cramer
-  
-  pclass_survived <- assocstats(table(titanic_data$Pclass, titanic_data$Survived))
-  pclass_survived$cramer
-  
-  cabin_survived <- assocstats(table(titanic_data$Cabin, titanic_data$Survived))
-  cabin_survived$cramer
-  
-  name_survived <- assocstats(table(titanic_data$Name, titanic_data$Survived))
-  name_survived$cramer
-  
-  gender_survived <- assocstats(table(titanic_data$Sex, titanic_data$Survived))
-  gender_survived$cramer
-  
-  age_survived <- assocstats(table(titanic_data$Age, titanic_data$Survived))
-  age_survived$cramer
-  
-  sbsp_survived <- assocstats(table(titanic_data$SibSp, titanic_data$Survived))
-  sbsp_survived$cramer
-  
-  pach_survived <- assocstats(table(titanic_data$SibSp, titanic_data$Survived))
-  pach_survived$cramer
-  
-  ticket_survived <- assocstats(table(titanic_data$Ticket, titanic_data$Survived))
-  ticket_survived$cramer
-  
-  fare_survived <- assocstats(table(titanic_data$Fare, titanic_data$Survived))
-  fare_survived$cramer
-  
-  embarked_survived <- assocstats(table(titanic_data$Embarked, titanic_data$Survived))
-  embarked_survived$cramer
-  
-  output$dependencies <- renderTable({
-    
-    data <- data.frame(Kombinationen = c("Passenger | Survived:",
-                                         "Pclass | Survived:", 
-                                         "Cabin | Survived:",
-                                         "Name | Survived:",
-                                         "Gender | Survived:", 
-                                         "Age | Survived:",
-                                         "Sibling_Spouses | Survived:", 
-                                         "Parents_Children | Survived:",
-                                         "Ticket | Survived:",
-                                         "Fare_Prices | Survived:",
-                                         "Embarked | Survived:"
-                                         
-    ),
-    
-    Abhängigkeit = c(passenger_survived$cramer,
-                     pclass_survived$cramer,
-                     cabin_survived$cramer,
-                     name_survived$cramer,
-                     gender_survived$cramer,
-                     age_survived$cramer,
-                     sbsp_survived$cramer,
-                     pach_survived$cramer,
-                     ticket_survived$cramer,
-                     fare_survived$cramer,
-                     embarked_survived$cramer
-    )
-    )
-    data
     
   })
   
